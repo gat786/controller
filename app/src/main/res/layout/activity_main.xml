@@ -23,7 +23,7 @@
             android:layout_height="wrap_content"/>
     </Toolbar>
     
-    <com.google.android.exoplayer2.ui.PlayerView
+    <yjkim.mjpegviewer.MjpegView
         android:layout_below="@id/appbar"
         android:id="@+id/video_view"
         android:layout_width="match_parent"
@@ -97,12 +97,12 @@
             <TextView
                 android:id="@+id/angle_rotation"
                 android:textSize="16sp"
-                android:text="90"
                 android:layout_gravity="center_horizontal"
                 android:layout_margin="4dp"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"/>
             <Button
+                android:id="@+id/reset_theta"
                 android:layout_margin="4dp"
                 android:text="Reset Rotation"
                 style="@style/Base.Widget.AppCompat.Button.Borderless"
