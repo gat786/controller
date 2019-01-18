@@ -16,6 +16,7 @@ import com.google.android.exoplayer2.trackselection.DefaultTrackSelector
 import com.google.android.exoplayer2.upstream.DefaultBandwidthMeter
 import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory
 import com.google.android.exoplayer2.util.Util
+import com.google.gson.JsonObject
 import kotlinx.android.synthetic.main.activity_main.*
 import org.jetbrains.anko.AnkoLogger
 import org.jetbrains.anko.info
@@ -24,112 +25,54 @@ import yjkim.mjpegviewer.MjpegView
 
 class MainActivity : AppCompatActivity(), AnkoLogger
 {
-    val videoUrl = "http://192.168.2.150:12345/?action=stream"
+    val sensorData = SensorData()
+    val port = "12345"
+    val videoUrl = "${sensorData.baseUrl}:$port/?action=stream"
     var theta = 0
 
     private lateinit var player:SimpleExoPlayer
     val mHandler = Handler()
+    val apiController = ApiController()
+
     var mRunnable = object : Runnable{
         override fun run() {
-            info { "pressed" }
+            val data = apiController.getData()
+            info { "recieved $data" }
         }
-
+    }
+    val delay : Long = 5000
+    fun requestData(){
+        mHandler.postDelayed(mRunnable,delay)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        angle_rotation.text = theta.toString()
-        up_button.setOnTouchListener { v, event ->
-            onTouchEvent(event,Direction.Forward,v)
+        requestData()
+
+        mHandler.postDelayed(mRunnable,1000)
+
+        up_button.setOnClickListener {
+            apiController.putData(direction = Direction.Forward)
         }
 
-        down_button.setOnTouchListener { v, event ->
-            onTouchEvent(event,Direction.Backward,v)
+        down_button.setOnClickListener {
+            apiController.putData(direction = Direction.Backward)
         }
 
-        left_button.setOnTouchListener { v, event ->
-            onTouchEvent(event,Direction.Left,v)
+        right_button.setOnClickListener {
+            apiController.putData(direction = Direction.Right)
         }
 
-        right_button.setOnTouchListener { v, event ->
-            onTouchEvent(event,Direction.Right,v)
-        }
-
-        reset_theta.setOnClickListener {
-            theta = 0
-            angle_rotation.text = theta.toString()
+        left_button.setOnClickListener {
+            apiController.putData(direction = Direction.Left)
         }
 
         val mjpegView:MjpegView = video_view
 
         mjpegView.Start(videoUrl)
     }
-    fun onTouchEvent(
-        event: MotionEvent?,
-        direction: Direction? = null,
-        view: View): Boolean {
-        if (direction==Direction.Forward){
-            info { "move ahead" }
-            view.elevation = Integer.parseInt("4").toFloat()
-        }
-        else if (direction == Direction.Backward){
-            info { "move backwards" }
-        }
-        else if (direction == Direction.Right){
-            info { "increasing angle towards right" }
-            if(theta < 90 && theta >= -90){
-                theta += 1
-            }
-            angle_rotation.text = theta.toString()
-        }
-        else if (direction == Direction.Left){
-            info { "increasing angle towards left" }
-            if(theta <= 90 && theta > -90){
-                theta -= 1
-            }
-            angle_rotation.text = theta.toString()
-        }
-        return true
-    }
-
-//    fun initializePlayer(){
-//        player = ExoPlayerFactory.newSimpleInstance(baseContext)
-//        video_view.player = player
-//        player.prepare(getHlsMediaSource(videoUrl))
-//    }
-//
-//    fun createDataSource(videoUrl:String): DashMediaSource? {
-//        val dataSourceFactory = DefaultDataSourceFactory(baseContext, Util.getUserAgent(
-//            baseContext,"BatMobile"
-//        ))
-//
-//
-//        val dashMediaSource = DashMediaSource.Factory(
-//            DefaultDashChunkSource.Factory(dataSourceFactory),
-//            dataSourceFactory
-//        )
-//
-//        val bandwidthMeter = DefaultBandwidthMeter()
-//        val trackSelector = DefaultTrackSelector(AdaptiveTrackSelection.Factory(bandwidthMeter))
-//
-//        return dashMediaSource.createMediaSource(Uri.parse(videoUrl))
-//    }
-//
-//    fun getHlsMediaSource(hls: String): MediaSource {
-//        val bandwidthMeter = DefaultBandwidthMeter()
-//        val applicationName = Util.getUserAgent(baseContext, "BatMobile")
-//        val dataSourceFactory = DefaultDataSourceFactory(baseContext, applicationName, bandwidthMeter)
-//        val factory = HlsMediaSource.Factory(dataSourceFactory)
-//        return factory.createMediaSource(Uri.parse(hls))
-//    }
-//
-//    fun pauseListener(){
-//        val listener  = object: Player.EventListener{
-//
-//        }
-//    }
 }
 enum class Direction{
     Forward,Backward,Right,Left
