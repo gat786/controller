@@ -1,77 +1,149 @@
 package `in`.webxstudio.batmobilecontroller
 
-import android.net.Uri
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
-import android.os.Handler
-import android.view.MotionEvent
+import android.util.Log
 import android.view.View
-import com.google.android.exoplayer2.*
-import com.google.android.exoplayer2.source.MediaSource
-import com.google.android.exoplayer2.source.dash.DashMediaSource
-import com.google.android.exoplayer2.source.dash.DefaultDashChunkSource
-import com.google.android.exoplayer2.source.hls.HlsMediaSource
-import com.google.android.exoplayer2.trackselection.AdaptiveTrackSelection
-import com.google.android.exoplayer2.trackselection.DefaultTrackSelector
-import com.google.android.exoplayer2.upstream.DefaultBandwidthMeter
-import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory
-import com.google.android.exoplayer2.util.Util
-import com.google.gson.JsonObject
+import android.widget.Toast
+import com.google.zxing.integration.android.IntentIntegrator
+import com.stealthcopter.networktools.SubnetDevices
+import com.stealthcopter.networktools.subnet.Device
 import kotlinx.android.synthetic.main.activity_main.*
 import org.jetbrains.anko.AnkoLogger
-import org.jetbrains.anko.info
-import yjkim.mjpegviewer.MjpegCallback
-import yjkim.mjpegviewer.MjpegView
+import org.jetbrains.anko.doAsync
+import org.jetbrains.anko.uiThread
+import java.util.ArrayList
 
 class MainActivity : AppCompatActivity(), AnkoLogger
 {
     val sensorData = SensorData()
+    var scannedMacAddress = ""
     val port = "12345"
     val videoUrl = "${sensorData.baseUrl}:$port/?action=stream"
-    var theta = 0
 
-    private lateinit var player:SimpleExoPlayer
-    val mHandler = Handler()
-    val apiController = ApiController()
+    val scannerIntegrator = IntentIntegrator(this)
+    val regex = "[0-9a-f]{2}([-:]?)[0-9a-f]{2}(\\\\1[0-9a-f]{2}){4}\$"
 
-    var mRunnable = object : Runnable{
-        override fun run() {
-            val data = apiController.getData()
-            info { "recieved $data" }
-        }
-    }
-    val delay : Long = 5000
-    fun requestData(){
-        mHandler.postDelayed(mRunnable,delay)
-    }
+    val TAG="MainActivity"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        requestData()
-
-        mHandler.postDelayed(mRunnable,1000)
-
         up_button.setOnClickListener {
-            apiController.putData(direction = Direction.Forward)
+            //move ahead
         }
 
         down_button.setOnClickListener {
-            apiController.putData(direction = Direction.Backward)
+            //backwards
         }
 
         right_button.setOnClickListener {
-            apiController.putData(direction = Direction.Right)
+            //move right
         }
 
         left_button.setOnClickListener {
-            apiController.putData(direction = Direction.Left)
+            //move left
         }
 
-        val mjpegView:MjpegView = video_view
+        val streamUrl = "http://192.168.0.101:8080/?action=stream"
 
-        mjpegView.Start(videoUrl)
+        video_view.Start(streamUrl)
+
+        //setupVideoPlayer("http://192.168.0.104:8080/?action=stream")
+//        if (SensorData().baseUrl != null ){
+//            setupVideoPlayer(SensorData().baseUrl!!)
+//        }else{
+//            if(ContextCompat.checkSelfPermission(this,android.Manifest.permission.CAMERA)==PackageManager.PERMISSION_GRANTED){
+//                scannerIntegrator.setOrientationLocked(true)
+//                scannerIntegrator.initiateScan()
+//            }else{
+//                ActivityCompat.requestPermissions(this, arrayOf(android.Manifest.permission.CAMERA),101)
+//            }
+//        }
+    }
+
+//    fun setupVideoPlayer(videoUrl:String){
+//        video_view.setUrl(videoUrl)
+//        video_view.startStream()
+//    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        val result = IntentIntegrator.parseActivityResult(requestCode,resultCode,data)
+        if(result!=null){
+            if(result.contents ==null)
+                Toast.makeText(this,"Cancelled",Toast.LENGTH_SHORT).show()
+            else{
+                scannedMacAddress = result.contents
+                Log.d(TAG,"Scanned Mac Address $scannedMacAddress")
+                findDevices()
+            }
+        }
+    }
+
+    var devicesList = ArrayList<Device>()
+    private var ipAddress = ""
+    fun findDevices(){
+        doAsync {
+            SubnetDevices.fromLocalAddress().findDevices(object : SubnetDevices.OnSubnetDeviceFound{
+                override fun onFinished(devicesFound: ArrayList<Device>?) {
+                    devicesList = devicesFound!!
+                    Log.d(TAG,"Search Completed")
+                    uiThread {
+                        setUpAccordingly()
+                    }
+
+                }
+
+                override fun onDeviceFound(device: Device?) {
+                    Log.i(TAG,"Device found ${device!!.ip} ${device!!.mac}")
+                }
+            })
+        }
+    }
+
+    fun setUpAccordingly(){
+        var deviceFound = false
+        for(device in devicesList){
+            if (device.mac != null){
+                if (device.mac.toUpperCase() == scannedMacAddress){
+                    deviceFound = true
+                    ipAddress = device.ip
+                }
+            }
+        }
+        if(deviceFound){
+            val vdoaddress="http://$ipAddress:8080/?action=stream"
+            Log.d(TAG,"Rover found successfully at $vdoaddress")
+            Toast.makeText(applicationContext,"Rover Found starting services",Toast.LENGTH_SHORT).show()
+            progressBar.visibility = View.INVISIBLE
+        }
+        else{
+            Log.d(TAG,"Rover not found")
+            Toast.makeText(applicationContext,"Rover not found",Toast.LENGTH_SHORT).show()
+            progressBar.visibility = View.INVISIBLE
+        }
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (grantResults.isNotEmpty() && grantResults[0]==PackageManager.PERMISSION_GRANTED){
+            IntentIntegrator(this).initiateScan()
+        }else{
+            Toast.makeText(this,"Camera Permission is necessary please allow to continue using app",Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+
+    }
+
+    override fun onPause() {
+        super.onPause()
     }
 }
 enum class Direction{

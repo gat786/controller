@@ -38,7 +38,16 @@ dependencies {
     implementation 'com.google.android.exoplayer:exoplayer:2.9.3'
     //anko commons
     implementation "org.jetbrains.anko:anko-commons:$anko_version"
-    implementation 'com.github.dydwo92:Android-Simple-MjpegViewer:0.0'
+    implementation 'com.github.niqdev:mjpeg-view:1.6.0'
     implementation 'com.android.volley:volley:1.1.1'
     implementation 'com.google.code.gson:gson:2.8.5'
+
+    implementation 'org.eclipse.paho:org.eclipse.paho.client.mqttv3:1.1.0'
+    implementation 'org.eclipse.paho:org.eclipse.paho.android.service:1.1.1'
+
+    implementation 'com.github.stealthcopter:AndroidNetworkTools:0.4.3'
+
+    implementation 'com.journeyapps:zxing-android-embedded:3.6.0'
+
+    implementation 'com.github.dydwo92:Android-Simple-MjpegViewer:0.0'
 }
