@@ -3,6 +3,7 @@ package `in`.webxstudio.batmobilecontroller
 import android.util.Log
 import android.widget.TextView
 import org.eclipse.paho.client.mqttv3.*
+import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence
 
 val TAG = "MqttController"
 
@@ -16,7 +17,8 @@ class MqttController{
     val directions = "directions"
 
     fun createController(serverUrl:String): MqttClient {
-        mqttClient = MqttClient(serverUrl,"rover_client")
+        Log.d(TAG,"ServerUrl is $serverUrl")
+        mqttClient = MqttClient("tcp://$serverUrl:1883","rover_client",MemoryPersistence())
         val options = MqttConnectOptions()
         options.isCleanSession = true
         Log.d(TAG,"Connecting to server $serverUrl")
