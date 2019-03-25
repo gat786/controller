@@ -4,6 +4,8 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
+import android.support.v4.app.ActivityCompat
+import android.support.v4.content.ContextCompat
 import android.util.Log
 import android.view.View
 import android.widget.Toast
@@ -28,6 +30,10 @@ class MainActivity : AppCompatActivity(), AnkoLogger
 
     val TAG="MainActivity"
 
+    var ip_address = "192.168.0.102"
+
+    val streamUrl = "http://$ip_address:8080/?action=stream"
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -48,27 +54,18 @@ class MainActivity : AppCompatActivity(), AnkoLogger
             //move left
         }
 
-        val streamUrl = "http://192.168.0.101:8080/?action=stream"
 
-        video_view.Start(streamUrl)
-
-        //setupVideoPlayer("http://192.168.0.104:8080/?action=stream")
-//        if (SensorData().baseUrl != null ){
-//            setupVideoPlayer(SensorData().baseUrl!!)
-//        }else{
-//            if(ContextCompat.checkSelfPermission(this,android.Manifest.permission.CAMERA)==PackageManager.PERMISSION_GRANTED){
-//                scannerIntegrator.setOrientationLocked(true)
-//                scannerIntegrator.initiateScan()
-//            }else{
-//                ActivityCompat.requestPermissions(this, arrayOf(android.Manifest.permission.CAMERA),101)
-//            }
-//        }
+        if(ContextCompat.checkSelfPermission(this,android.Manifest.permission.CAMERA)==PackageManager.PERMISSION_GRANTED){
+            scannerIntegrator.setOrientationLocked(true)
+            scannerIntegrator.initiateScan()
+        }else{
+            ActivityCompat.requestPermissions(this, arrayOf(android.Manifest.permission.CAMERA),101)
+        }
     }
 
-//    fun setupVideoPlayer(videoUrl:String){
-//        video_view.setUrl(videoUrl)
-//        video_view.startStream()
-//    }
+    fun setupVideoPlayer(videoUrl:String){
+        video_view.Start(videoUrl)
+    }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
@@ -85,7 +82,6 @@ class MainActivity : AppCompatActivity(), AnkoLogger
     }
 
     var devicesList = ArrayList<Device>()
-    private var ipAddress = ""
     fun findDevices(){
         doAsync {
             SubnetDevices.fromLocalAddress().findDevices(object : SubnetDevices.OnSubnetDeviceFound{
@@ -111,15 +107,15 @@ class MainActivity : AppCompatActivity(), AnkoLogger
             if (device.mac != null){
                 if (device.mac.toUpperCase() == scannedMacAddress){
                     deviceFound = true
-                    ipAddress = device.ip
+                    ip_address = device.ip
                 }
             }
         }
         if(deviceFound){
-            val vdoaddress="http://$ipAddress:8080/?action=stream"
-            Log.d(TAG,"Rover found successfully at $vdoaddress")
+            Log.d(TAG,"Rover found successfully at $ip_address")
             Toast.makeText(applicationContext,"Rover Found starting services",Toast.LENGTH_SHORT).show()
             progressBar.visibility = View.INVISIBLE
+            setupVideoPlayer(streamUrl)
         }
         else{
             Log.d(TAG,"Rover not found")
