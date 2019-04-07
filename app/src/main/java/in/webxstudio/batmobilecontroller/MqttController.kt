@@ -1,14 +1,16 @@
 package `in`.webxstudio.batmobilecontroller
 
+import android.content.Context
 import android.util.Log
 import android.widget.TextView
+import org.eclipse.paho.android.service.MqttAndroidClient
 import org.eclipse.paho.client.mqttv3.*
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence
 
 val TAG = "MqttController"
 
 class MqttController{
-    lateinit var mqttClient: MqttClient
+    lateinit var mqttClient: MqttAndroidClient
 
     val temperature = "temp"
     val humidity = "humidity"
@@ -16,9 +18,9 @@ class MqttController{
 
     val directions = "directions"
 
-    fun createController(serverUrl:String): MqttClient {
+    fun createController(serverUrl:String,context: Context): MqttAndroidClient {
         Log.d(TAG,"ServerUrl is $serverUrl")
-        mqttClient = MqttClient("tcp://$serverUrl:1883","rover_client",MemoryPersistence())
+        mqttClient = MqttAndroidClient(context,"tcp://$serverUrl:1883",MqttClient.generateClientId())
         val options = MqttConnectOptions()
         options.isCleanSession = true
         Log.d(TAG,"Connecting to server $serverUrl")
@@ -27,18 +29,20 @@ class MqttController{
         return mqttClient
     }
 
-    fun sendDirection(direction:String,client: MqttClient){
+    fun sendDirection(direction:String,client: MqttAndroidClient){
         client.publish("directions",direction.toByteArray(),1,true)
         Log.d(TAG,"Message Published")
     }
 
-    fun getData(client: MqttClient,
+    fun getData(client: MqttAndroidClient,
                 tempTextview:TextView,
                 humidityTextView: TextView,
                 obstacleTextView:TextView){
-        client.subscribe(temperature)
-        client.subscribe(humidity)
-        client.subscribe(obstacle)
+
+        client.subscribe(temperature,1)
+        client.subscribe(humidity,1)
+        client.subscribe(obstacle,1)
+
         client.setCallback(object : MqttCallback{
             override fun messageArrived(topic: String?, message: MqttMessage?) {
                 Log.d(TAG,"Message received")
